@@ -9,6 +9,7 @@ import org.apache.http.util.EntityUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -86,15 +87,15 @@ public class Main {
     }
 
     // 是我们想要的链接吗
-    private static boolean isInterestingLink(String link){
+    private static boolean isInterestingLink(String link) {
         return (isNotLoginPage(link) && (isNewsPage(link) || isIndexPage(link)));
     }
 
-    private static boolean isIndexPage(String link){
+    private static boolean isIndexPage(String link) {
         return "https://sina.cn".equals(link);
     }
 
-    private static boolean isNewsPage(String link){
+    private static boolean isNewsPage(String link) {
         return link.contains("news.sina.cn");
     }
 
