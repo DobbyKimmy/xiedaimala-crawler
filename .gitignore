@@ -10,4 +10,4 @@ target/
 .project
 .settings/
 bin/
-
+*.db

@@ -14,6 +14,7 @@ import org.jsoup.nodes.Element;
 import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 public class Main {
     private static final String USER_NAME = "root";
@@ -33,9 +34,10 @@ public class Main {
             }
 
             if (isInterestingLink(link)) {
+                System.out.println(link);
                 Document doc = httpGetAndParseHtml(link);
                 parseUrlsFromPageAndStoreIntoDatabase(connection, doc);
-                storeIntoDatabaseIfItIsNewsPage(doc);
+                storeIntoDatabaseIfItIsNewsPage(connection, doc, link);
                 // 处理完成的数据要放入到processedLinks里面
                 updateDatabase(connection, link, "insert into LINKS_ALREADY_PROCESSED (link) values (?) ");
             }
@@ -53,7 +55,13 @@ public class Main {
     private static void parseUrlsFromPageAndStoreIntoDatabase(Connection connection, Document doc) throws SQLException {
         for (Element aTag : doc.select("a")) {
             String href = aTag.attr("href");
-            updateDatabase(connection, href, "insert into LINKS_TO_BE_PROCESSED (link) values (?) ");
+            // 有一些链接是以 “//” 开头的，需要在这样的链接前加上https:
+            if (href.startsWith("//")) {
+                href = "https:" + href;
+            }
+            if (!href.toLowerCase().startsWith("javascript")) {
+                updateDatabase(connection, href, "insert into LINKS_TO_BE_PROCESSED (link) values (?) ");
+            }
         }
     }
 
@@ -96,14 +104,21 @@ public class Main {
         return null;
     }
 
-    private static void storeIntoDatabaseIfItIsNewsPage(Document doc) {
+    private static void storeIntoDatabaseIfItIsNewsPage(Connection connection, Document doc, String link) throws SQLException {
         // 假如这是一个新闻的详情页面，就存入到数据库，否则就什么都不做
         // 假设所有包含article标签的都是新闻
         ArrayList<Element> articleTags = doc.select("article");
         if (!articleTags.isEmpty()) {
             for (Element articleTag : articleTags) {
                 String title = articleTag.child(0).text();
-                System.out.println(title);
+                String content = articleTag.select("p").stream().map(Element::text).collect(Collectors.joining("\n"));
+
+                try (PreparedStatement statement = connection.prepareStatement("insert into NEWS(url,TITLE,CONTENT,CREATED_AT,MODIFIED_AT) values ( ?,?,?,now(),now() )")) {
+                    statement.setString(1, link);
+                    statement.setString(2, title);
+                    statement.setString(3, content);
+                    statement.executeUpdate();
+                }
             }
         }
     }
@@ -112,17 +127,11 @@ public class Main {
         // 这是我们感兴趣的，我们只处理新浪站内的链接
         CloseableHttpClient httpclient = HttpClients.createDefault();
 
-        // 有一些链接是以 “//” 开头的，需要在这样的链接前加上https:
-        if (link.startsWith("//")) {
-            link = "https:" + link;
-        }
-
         HttpGet httpGet = new HttpGet(link);
         httpGet.addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36");
 
         try (CloseableHttpResponse response1 = httpclient.execute(httpGet)) {
             System.out.println(link);
-            System.out.println(response1.getStatusLine());
             HttpEntity entity1 = response1.getEntity();
             String html = EntityUtils.toString(entity1);
 
