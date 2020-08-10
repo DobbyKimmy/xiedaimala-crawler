@@ -27,7 +27,7 @@ public class MyBatisCrawlerDao implements CrawlerDao {
 
 
     @Override
-    public String getNextLinkThenDelete() throws SQLException {
+    public synchronized String getNextLinkThenDelete() throws SQLException {
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
             String url = session.selectOne("com.github.hcsp.MyMapper.selectNextAvailableLink");
             if (url != null) {
@@ -47,7 +47,7 @@ public class MyBatisCrawlerDao implements CrawlerDao {
     @Override
     public boolean isLinkProcessed(String link) throws SQLException {
         try (SqlSession session = sqlSessionFactory.openSession()) {
-            int count = session.selectOne("com.github.hcsp.MyMapper.countLink", link);
+            int count = (Integer) session.selectOne("com.github.hcsp.MyMapper.countLink", link);
             return count != 0;
         }
     }

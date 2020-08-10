@@ -1,6 +1,7 @@
 package com.github.hcsp;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+//import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -16,40 +17,43 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
-public class Crawler {
+public class Crawler extends Thread {
 
 
-    private CrawlerDao dao = new MyBatisCrawlerDao();
+    private CrawlerDao dao;
 
-    public void run() throws SQLException, IOException {
+    public Crawler(CrawlerDao dao) {
+        this.dao = dao;
+    }
 
-        String link;
-        // 先从数据库里拿出来一个链接(拿出来并从数据库中删除) 准备处理；如果能加载到则进行循环
-        while ((link = dao.getNextLinkThenDelete()) != null) {
+    @Override
+    public void run() {
+        try {
+            String link;
+            // 先从数据库里拿出来一个链接(拿出来并从数据库中删除) 准备处理；如果能加载到则进行循环
+            while ((link = dao.getNextLinkThenDelete()) != null) {
 
-            // 2. 判断从链接池拿到的链接是否被处理过了
-            if (dao.isLinkProcessed(link)) {
-                continue;
+                // 2. 判断从链接池拿到的链接是否被处理过了
+                if (dao.isLinkProcessed(link)) {
+                    continue;
+                }
+
+                if (isInterestingLink(link)) {
+                    System.out.println(link);
+                    Document doc = httpGetAndParseHtml(link);
+                    parseUrlsFromPageAndStoreIntoDatabase(doc);
+                    storeIntoDatabaseIfItIsNewsPage(doc, link);
+                    // 处理完成的数据要放入到processedLinks里面
+                    dao.insertProcessedLink(link);
+                }
             }
-
-            if (isInterestingLink(link)) {
-                System.out.println(link);
-                Document doc = httpGetAndParseHtml(link);
-                parseUrlsFromPageAndStoreIntoDatabase(doc);
-                storeIntoDatabaseIfItIsNewsPage(doc, link);
-                // 处理完成的数据要放入到processedLinks里面
-                dao.insertProcessedLink(link);
-            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
-    @SuppressFBWarnings("DMI_CONSTANT_DB_PASSWORD")
-    public static void main(String[] args) throws IOException, SQLException {
-        new Crawler().run();
-    }
 
-
-    private void parseUrlsFromPageAndStoreIntoDatabase(Document doc) throws SQLException {
+    private void parseUrlsFromPageAndStoreIntoDatabase(Document doc) {
         for (Element aTag : doc.select("a")) {
             String href = aTag.attr("href");
             // 有一些链接是以 “//” 开头的，需要在这样的链接前加上https:

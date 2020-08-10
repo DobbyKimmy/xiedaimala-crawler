@@ -101,6 +101,12 @@
             <version>3.5.2</version>
         </dependency>
 
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.17</version>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -164,7 +170,7 @@
                     <artifactId>flyway-maven-plugin</artifactId>
                     <version>5.2.4</version>
                     <configuration>
-                        <url>jdbc:h2:file:D:\jirengu\crawler\xiedaimala-crawler\news</url>
+                        <url>jdbc:mysql://localhost:3306/news?serverTimezone=UTC &amp; characterEncoding=utf-8</url>
                         <user>root</user>
                         <password>root</password>
                     </configuration>
