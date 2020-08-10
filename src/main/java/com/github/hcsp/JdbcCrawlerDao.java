@@ -19,7 +19,7 @@ public class JdbcCrawlerDao implements CrawlerDao {
 
     }
 
-    public String getNextLink(String sql) throws SQLException {
+    private String getNextLink(String sql) throws SQLException {
 
         ResultSet resultSet = null;
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -73,5 +73,15 @@ public class JdbcCrawlerDao implements CrawlerDao {
             }
         }
         return false;
+    }
+
+    @Override
+    public void insertLinkToBeProcessed(String href) {
+
+    }
+
+    @Override
+    public void insertProcessedLink(String link) {
+
     }
 }
