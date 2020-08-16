@@ -47,7 +47,7 @@ public class MyBatisCrawlerDao implements CrawlerDao {
     @Override
     public boolean isLinkProcessed(String link) throws SQLException {
         try (SqlSession session = sqlSessionFactory.openSession()) {
-            int count = (Integer) session.selectOne("com.github.hcsp.MyMapper.countLink", link);
+            int count = session.selectOne("com.github.hcsp.MyMapper.countLink", link);
             return count != 0;
         }
     }
